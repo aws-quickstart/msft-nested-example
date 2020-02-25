@@ -1,0 +1,797 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  This template deploys SharePoint 2019 by deploying VPC, Active Directory, SQL Server, and SharePoint
+  CloudFormation stacks. **WARNING** This template creates Amazon EC2 Windows instance
+  and related resources. You will be billed for the AWS resources used if you create
+  a stack from this template.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network configuration
+        Parameters:
+          - KeyPairName
+          - AvailabilityZones
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - VPCCIDR
+      - Label:
+          default: Microsoft SharePoint configuration
+        Parameters:
+          - SPBinaryBucket
+          - SPBinaryKey
+          - SPProductKey
+          - SQLAdminUserName
+          - SQLAdminPassword
+          - Farm
+          - SPServerNetBIOSName
+          - DNSPrefixCentralAdmin
+          - DNSPrefixMainSite
+          - DNSServerIP
+      - Label:
+          default: Microsoft Active Directory configuration
+        Parameters:
+          - ADServer1InstanceType
+          - ADServer1NetBIOSName
+          - ADServer1PrivateIP
+          - ADServer2InstanceType
+          - ADServer2NetBIOSName
+          - ADServer2PrivateIP
+          - DomainAdminUser
+          - DomainAdminPassword
+          - DomainDNSName
+          - DomainNetBIOSName
+      - Label:
+          default: Microsoft SQL Server configuration
+        Parameters:
+          - HostType
+          - DedicatedHostAMI
+          - SQLServerVersion
+          - SQLServiceAccount
+          - SQLServiceAccountPassword
+          - SQLLicenseProvided
+          - Volume1Size
+          - Volume1Type
+          - Volume1Iops
+          - Volume2Size
+          - Volume2Type
+          - Volume2Iops
+          - Volume3Size
+          - Volume3Type
+          - Volume3Iops
+          - AvailabiltyGroupName
+      - Label:
+          default: WSFC configuration
+        Parameters:
+          - WSFCFileServerInstanceType
+          - WSFCFileServerNetBIOSName
+          - WSFCFileServerPrivateIP
+          - WSFCNode1InstanceType
+          - WSFCNode1NetBIOSName
+          - WSFCNode1PrivateIP1
+          - WSFCNode1PrivateIP2
+          - WSFCNode1PrivateIP3
+          - DedicatedHostIDNode1
+          - WSFCNode2InstanceType
+          - WSFCNode2NetBIOSName
+          - WSFCNode2PrivateIP1
+          - WSFCNode2PrivateIP2
+          - WSFCNode2PrivateIP3
+          - DedicatedHostIDNode2
+      - Label:
+          default: Microsoft Remote Desktop Gateway configuration
+        Parameters:
+          - NumberOfRDGWHosts
+          - RDGWCIDR
+          - RDGWInstanceType
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      AvailabilityZones:
+        default: Availability Zones
+      ADServer1InstanceType:
+        default: Domain controller 1 instance type
+      ADServer1NetBIOSName:
+        default: Domain controller 1 NetBIOS name
+      ADServer1PrivateIP:
+        default: Domain controller 1 private IP address
+      ADServer2InstanceType:
+        default: Domain controller 2 instance type
+      ADServer2NetBIOSName:
+        default: Domain controller 2 NetBIOS name
+      ADServer2PrivateIP:
+        default: Domain controller 2 private IP address
+      DomainAdminPassword:
+        default: Domain admin password
+      DomainAdminUser:
+        default: Domain admin user name
+      DomainDNSName:
+        default: Domain DNS name
+      DomainNetBIOSName:
+        default: Domain NetBIOS name
+      KeyPairName:
+        default: Key pair mame
+      NumberOfRDGWHosts:
+        default: Number of RD Gateway hosts
+      PrivateSubnet1CIDR:
+        default: Private subnet 1 CIDR
+      PrivateSubnet2CIDR:
+        default: Private subnet 2 CIDR
+      PublicSubnet1CIDR:
+        default: Public subnet 1 CIDR
+      PublicSubnet2CIDR:
+        default: Public subnet 2 CIDR
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+      RDGWCIDR:
+        default: Allowed RD Gateway external access CIDR
+      RDGWInstanceType:
+        default: RD Gateway server instance type
+      SPServerNetBIOSName:
+        default: SharePoint Server NetBIOS name
+      SQLServerVersion:
+        default: Version
+      SQLServiceAccount:
+        default: Service account name
+      SQLServiceAccountPassword:
+        default: Service account password
+      SQLLicenseProvided:
+        default: Amazon-provided SQL Server license
+      SQLAdminUserName:
+        default: User name of SQL administrator
+      SQLAdminPassword:
+        default: Password of the SQL administrator
+      AvailabiltyGroupName:
+        default: Availability group name
+      Volume1Iops:
+        default: Data volume IOPS
+      Volume1Size:
+        default: Data volume size
+      Volume1Type:
+        default: Data volume type
+      Volume2Iops:
+        default: Logs volume IOPS
+      Volume2Size:
+        default: Logs volume size
+      Volume2Type:
+        default: Logs volume type
+      Volume3Iops:
+        default: TempDB volume IOPS
+      Volume3Size:
+        default: TempDB volume size
+      Volume3Type:
+        default: TempDB volume type
+      VPCCIDR:
+        default: VPC CIDR
+      WSFCFileServerInstanceType:
+        default: File server instance type
+      WSFCFileServerNetBIOSName:
+        default: File server NetBIOS name
+      WSFCFileServerPrivateIP:
+        default: File server private IP address
+      WSFCNode1InstanceType:
+        default: WSFC node 1 instance type
+      WSFCNode1NetBIOSName:
+        default: WSFC node 1 NetBIOS name
+      WSFCNode1PrivateIP1:
+        default: WSFC node 1 private IP address 1
+      WSFCNode1PrivateIP2:
+        default: WSFC node 1 private IP address 2
+      WSFCNode1PrivateIP3:
+        default: WSFC node 1 private IP address 3
+      WSFCNode2InstanceType:
+        default: WSFC node 2 instance type
+      WSFCNode2NetBIOSName:
+        default: WSFC node 2 NetBIOS name
+      WSFCNode2PrivateIP1:
+        default: WSFC node 2 private IP address 1
+      WSFCNode2PrivateIP2:
+        default: WSFC node 2 private IP address 2
+      WSFCNode2PrivateIP3:
+        default: WSFC Node 2 private IP address 3
+      SPBinaryBucket:
+        default: SharePoint binary bucket
+      SPBinaryKey:
+        default: SharePoint binary key
+      SPProductKey:
+        default: SharePoint product key
+      WS2019FULLBASE:
+        default: Windows Server 2019 full base AMI
+      SPServerInstanceType:
+        default: SharePoint Server instance type
+      SubnetID:
+        default: Subnet ID
+      Farm:
+        default: Farm
+      DNSPrefixCentralAdmin:
+        default: DNS name central admin
+      DNSPrefixMainSite:
+        default: DNS name main site
+      DNSServerIP:
+        default: DNS server IP address
+Parameters:
+  AvailabilityZones:
+    Description: 'List of Availability Zones to use for the subnets in the VPC. Only two Availability Zones are used for this deployment, and the logical order is preserved.'
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+  ADServer1InstanceType:
+    AllowedValues:
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+    Default: m4.xlarge
+    Description: EC2 instance type for the first Active Directory instance.
+    Type: String
+  ADServer1NetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    Default: DC1
+    Description: NetBIOS name of the first Active Directory server (up to 15 characters).
+    MaxLength: '15'
+    MinLength: '1'
+    Type: String
+  ADServer1PrivateIP:
+    Default: 10.0.0.10
+    Description: Fixed private IP address for the first Active Directory server located in Availability Zone 1.
+    Type: String
+  ADServer2InstanceType:
+    AllowedValues:
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+    Default: m4.xlarge
+    Description: EC2 instance type for the second Active Directory instance.
+    Type: String
+  ADServer2NetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    Default: DC2
+    Description: NetBIOS name of the second Active Directory server (up to 15 characters).
+    MaxLength: '15'
+    MinLength: '1'
+    Type: String
+  ADServer2PrivateIP:
+    Default: 10.0.64.10
+    Description: Fixed private IP address for the second Active Directory server located in Availability Zone 2.
+    Type: String
+  DomainAdminPassword:
+    AllowedPattern: (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
+    Description: Password for the domain admin user. Must be at least 8 characters
+      and contain letters, numbers, and symbols.
+    MaxLength: '32'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  DomainAdminUser:
+    AllowedPattern: '[a-zA-Z0-9]*'
+    Default: StackAdmin
+    Description: User name for the account that will be added as Domain Administrator.
+      This is separate from the default Administrator account.
+    MaxLength: '25'
+    MinLength: '5'
+    Type: String
+  DomainDNSName:
+    AllowedPattern: '[a-zA-Z0-9\-]+\..+'
+    Default: example.com
+    Description: Fully qualified domain name (FQDN) of the forest root domain.
+    MaxLength: '25'
+    MinLength: '2'
+    Type: String
+  DomainNetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    Default: example
+    Description: NetBIOS name of the domain (up to 15 characters) for users of earlier
+      versions of Windows.
+    MaxLength: '15'
+    MinLength: '1'
+    Type: String
+  KeyPairName:
+    Description: Public/private key pair that allows you to securely connect to your instance
+      after it launches.
+    Type: AWS::EC2::KeyPair::KeyName
+  NumberOfRDGWHosts:
+    AllowedValues:
+      - '1'
+      - '2'
+      - '3'
+      - '4'
+    Default: '1'
+    Description: The number of RD Gateway hosts to create (up to four).
+    Type: String
+  PrivateSubnet1CIDR:
+    AllowedPattern: '[a-zA-Z0-9]+\..+'
+    Default: 10.0.0.0/19
+    Description: CIDR block for the Active Directory Server tier located in Availability Zone 1.
+    Type: String
+  PrivateSubnet2CIDR:
+    AllowedPattern: '[a-zA-Z0-9]+\..+'
+    Default: 10.0.64.0/19
+    Description: CIDR block for the Active Directory Server tier located in Availability Zone 2.
+    Type: String
+  PublicSubnet1CIDR:
+    AllowedPattern: '[a-zA-Z0-9]+\..+'
+    Default: 10.0.32.0/20
+    Description: CIDR block for the public (DMZ) subnet located in Availability Zone 1.
+    Type: String
+  PublicSubnet2CIDR:
+    AllowedPattern: '[a-zA-Z0-9]+\..+'
+    Default: 10.0.96.0/20
+    Description: CIDR block for the public (DMZ) subnet located in Availability Zone 2.
+    Type: String
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: aws-quickstart
+    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+      can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-/]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/).
+    Default: quickstart-microsoft-sharepoint/
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+  RDGWCIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: Allowed CIDR block for external access to the RD Gateway hosts.
+    Type: String
+  RDGWInstanceType:
+    AllowedValues:
+      - t2.small
+      - t2.medium
+      - t2.large
+      - m5.large
+      - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
+    Default: m5.xlarge
+    Description: EC2 instance type for the RD Gateway instance.
+    Type: String
+  SPServerNetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9\-]+'
+    Default: SPServer
+    Description: NetBIOS name (single-server deployment) or name prefix (farm deployment) of the SharePoint server or servers (up to 14 characters).
+    MaxLength: '14'
+    MinLength: '1'
+    Type: String
+  SQLServerVersion:
+    AllowedValues:
+      - '2016'
+      - '2017'
+    Default: '2017'
+    Description: Version of SQL Server to install on WSFC nodes. Choose 2016 or 2017.
+    Type: String
+  SQLServiceAccount:
+    AllowedPattern: '[a-zA-Z0-9]*'
+    Default: sqlsa
+    Description: User name for the SQL Server service account. This account is a Domain
+      User.
+    MaxLength: '25'
+    MinLength: '5'
+    Type: String
+  SQLServiceAccountPassword:
+    AllowedPattern: (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
+    Description: Password for the SQL Server service account. Must be at least 8 characters
+      and contain letters, numbers, and symbols.
+    MaxLength: '32'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  SQLLicenseProvided:
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Default: 'yes'
+    Description: Choose yes to license SQL Server from AWS Marketplace. Choose no to provide your own license post-deployment.
+    Type: String
+  AvailabiltyGroupName:
+    AllowedPattern: '[a-zA-Z0-9\-]+'
+    Default: "SQLAG1"
+    Description: "NetBIOS name of the SQL database or availability group (up to 15 characters)."
+    MaxLength: '15'
+    MinLength: '1'
+    Type: "String"
+  Volume1Iops:
+    Default: '1000'
+    Description: IOPS for the SQL Data drive (use only when volume type is io1).
+    MaxValue: '20000'
+    MinValue: '100'
+    Type: Number
+  Volume1Size:
+    Default: '500'
+    Description: Volume size for the SQL Data drive, in GiB.
+    MaxValue: '16000'
+    MinValue: '100'
+    Type: Number
+  Volume1Type:
+    AllowedValues:
+      - gp2
+      - io1
+    Default: gp2
+    Description: Volume type for the SQL Data drive.
+    Type: String
+  Volume2Iops:
+    Default: '1000'
+    Description: IOPS for the SQL Logs drive (use only when volume type is io1).
+    MaxValue: '20000'
+    MinValue: '100'
+    Type: Number
+  Volume2Size:
+    Default: '500'
+    Description: Volume size for the SQL Logs drive, in GiB.
+    MaxValue: '16000'
+    MinValue: '100'
+    Type: Number
+  Volume2Type:
+    AllowedValues:
+      - gp2
+      - io1
+    Default: gp2
+    Description: Volume type for the SQL Logs drive.
+    Type: String
+  Volume3Iops:
+    Default: '1000'
+    Description: IOPS for the SQL TempDB drive (only used when volume type is io1).
+    MaxValue: '20000'
+    MinValue: '100'
+    Type: Number
+  Volume3Size:
+    Default: '500'
+    Description: Volume size for the SQL TempDB drive, in GiB.
+    MaxValue: '16000'
+    MinValue: '100'
+    Type: Number
+  Volume3Type:
+    AllowedValues:
+      - gp2
+      - io1
+    Default: gp2
+    Description: Volume type for the SQL TempDB drive.
+    Type: String
+  VPCCIDR:
+    AllowedPattern: '[a-zA-Z0-9]+\..+'
+    Default: 10.0.0.0/16
+    Description: CIDR Block for the VPC.
+    Type: String
+  WSFCNode1InstanceType:
+    AllowedValues:
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.12xlarge
+    ConstraintDescription: Only EBS Optimized instance types r3.xlarge, r3.2xlarge,
+      r3.4xlarge allowed
+    Default: r4.xlarge
+    Description: EC2 instance type for the first WSFC node.
+    Type: String
+  WSFCNode1NetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    Default: WSFCNode1
+    Description: NetBIOS name of the first WSFC node (up to 15 characters).
+    MaxLength: '15'
+    MinLength: '1'
+    Type: String
+  WSFCNode1PrivateIP1:
+    Default: 10.0.0.100
+    Description: Primary private IP address for the first WSFC node located in Availability Zone 1.
+    Type: String
+  WSFCNode1PrivateIP2:
+    Default: 10.0.0.101
+    Description: Secondary private IP address for the WSFC cluster on the first WSFC node.
+    Type: String
+  WSFCNode1PrivateIP3:
+    Default: 10.0.0.102
+    Description: Third private IP address for the availability group listener on the first WSFC node.
+    Type: String
+  WSFCNode2InstanceType:
+    AllowedValues:
+      - r4.xlarge
+      - r4.2xlarge
+      - r4.4xlarge
+      - r4.8xlarge
+      - r5.large
+      - r5.xlarge
+      - r5.2xlarge
+      - r5.4xlarge
+      - r5.12xlarge
+    ConstraintDescription: Only EBS Optimized instance types r3.xlarge, r3.2xlarge,
+      r3.4xlarge allowed
+    Default: r4.xlarge
+    Description: EC2 instance type for the second WSFC node.
+    Type: String
+  WSFCNode2NetBIOSName:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    Default: WSFCNode2
+    Description: NetBIOS name of the second WSFC node (up to 15 characters).
+    MaxLength: '15'
+    MinLength: '1'
+    Type: String
+  WSFCNode2PrivateIP1:
+    Default: 10.0.64.100
+    Description: Primary private IP address for the second WSFC node located in Availability Zone 2.
+    Type: String
+  WSFCNode2PrivateIP2:
+    Default: 10.0.64.101
+    Description: Secondary private IP address for the WSFC cluster on the second WSFC node.
+    Type: String
+  WSFCNode2PrivateIP3:
+    Default: 10.0.64.102
+    Description: Third private IP for the availability group listener on the second WSFC node.
+    Type: String
+  WSFCFileServerInstanceType:
+    AllowedValues:
+      - t2.small
+      - t2.medium
+      - t2.large
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+    Default: m5.large
+    Description: EC2 instance type for a file server for witness and replication folders.
+    Type: String
+  WSFCFileServerPrivateIP:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$
+    Default: 10.0.0.200
+    Description: Primary private IP for the file server located in Availability Zone 1.
+    Type: String
+  SPBinaryBucket:
+    Type: String
+    MinLength: 2
+    MaxLength: 255
+  SPBinaryKey:
+    Type: String
+    MinLength: 2
+    MaxLength: 255
+  SPProductKey:
+    Type: String
+    Description: The product key to use with SharePoint.
+    MinLength: 29
+    MaxLength: 29
+    Default: M692G-8N2JP-GG8B2-2W2P7-YY7J6 # Default SharePoint 2019 Enterprise Trial Key
+  Farm:
+    AllowedValues:
+    - "Deploy a SharePoint farm"
+    - "Deploy a single SharePoint server"
+    ConstraintDescription: If no is selected, other DNS Prefix values will be ignored
+    Default: "Deploy a SharePoint farm"
+    Description: Choose whether you want to deploy a SharePoint farm or a single SharePoint server.
+    Type: String
+  DNSPrefixCentralAdmin:
+    Type: String
+    Description: The domain name to use for central admin (without the domain suffix; use 'admin' not 'admin.domain.com').
+    MinLength: 1
+    MaxLength: 20
+    Default: spadmin
+  DNSPrefixMainSite:
+    Type: String
+    Description: The domain name to use for the main SharePoint site (without the domain suffix; use 'site' not 'site.domain.com').
+    MinLength: 1
+    MaxLength: 20
+    Default: sharepoint
+  DNSServerIP:
+    Type: String
+    Description: The IP address of a DNS server on the network that will allow DNS entries to be created as the admin account.
+    MinLength: 8
+    MaxLength: 16
+    Default: 10.0.0.10
+Conditions:
+  GovCloudCondition: !Equals
+    - !Ref 'AWS::Region'
+    - us-gov-west-1
+  FarmSelected:
+    Fn::Equals:
+    - Ref: Farm
+    - "Deploy a SharePoint farm"
+  SingleSelected:
+    Fn::Equals:
+    - Ref: Farm
+    - "Deploy a single SharePoint server"
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        AvailabilityZones: !Join
+          - ','
+          - !Ref 'AvailabilityZones'
+        KeyPairName: !Ref 'KeyPairName'
+        NumberOfAZs: '2'
+        PrivateSubnet1ACIDR: !Ref 'PrivateSubnet1CIDR'
+        PrivateSubnet2ACIDR: !Ref 'PrivateSubnet2CIDR'
+        PublicSubnet1CIDR: !Ref 'PublicSubnet1CIDR'
+        PublicSubnet2CIDR: !Ref 'PublicSubnet2CIDR'
+        VPCCIDR: !Ref 'VPCCIDR'
+  ADStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VPCStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-activedirectory/templates/ad-1.template
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        ADServer1PrivateIP: !Ref 'ADServer1PrivateIP'
+        ADServer2InstanceType: !Ref 'ADServer2InstanceType'
+        ADServer2PrivateIP: !Ref 'ADServer2PrivateIP'
+        ADServer1InstanceType: !Ref 'ADServer1InstanceType'
+        ADServer1NetBIOSName: !Ref 'ADServer1NetBIOSName'
+        ADServer2NetBIOSName: !Ref 'ADServer2NetBIOSName'
+        DomainAdminPassword: !Ref 'DomainAdminPassword'
+        DomainAdminUser: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        KeyPairName: !Ref 'KeyPairName'
+        PrivateSubnet1ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet1AID'
+        PrivateSubnet2ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet2AID'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+        QSS3BucketName: !Ref 'QSS3BucketName'
+        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-microsoft-activedirectory/'
+        VPCCIDR: !GetAtt 'VPCStack.Outputs.VPCCIDR'
+  RDGWStack:
+    DependsOn: ADStack
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-rdgateway/templates/rdgw-domain.template
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        DomainAdminPassword: !Ref 'DomainAdminPassword'
+        DomainAdminUser: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainMemberSGID: !GetAtt 'ADStack.Outputs.DomainMemberSGID'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        KeyPairName: !Ref 'KeyPairName'
+        NumberOfRDGWHosts: !Ref 'NumberOfRDGWHosts'
+        PublicSubnet1ID: !GetAtt 'VPCStack.Outputs.PublicSubnet1ID'
+        PublicSubnet2ID: !GetAtt 'VPCStack.Outputs.PublicSubnet2ID'
+        QSS3BucketName: !Ref 'QSS3BucketName'
+        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-microsoft-rdgateway/'
+        RDGWInstanceType: !Ref 'RDGWInstanceType'
+        RDGWCIDR: !Ref 'RDGWCIDR'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+  SQLStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ADStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-sql/templates/sql.template
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        ADScenarioType: Microsoft AD on Amazon EC2
+        DomainAdminPassword: !Ref 'DomainAdminPassword'
+        DomainAdminUser: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainMemberSGID: !GetAtt 'ADStack.Outputs.DomainMemberSGID'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        KeyPairName: !Ref 'KeyPairName'
+        SQLServiceAccount: !Ref 'SQLServiceAccount'
+        SQLServiceAccountPassword: !Ref 'SQLServiceAccountPassword'
+        SQLLicenseProvided: !Ref 'SQLLicenseProvided'
+        AvailabiltyGroupName: !Ref 'AvailabiltyGroupName'
+        WSFCNode1InstanceType: !Ref 'WSFCNode1InstanceType'
+        WSFCNode1NetBIOSName: !Ref 'WSFCNode1NetBIOSName'
+        WSFCNode1PrivateIP1: !Ref 'WSFCNode1PrivateIP1'
+        WSFCNode1PrivateIP2: !Ref 'WSFCNode1PrivateIP2'
+        WSFCNode1PrivateIP3: !Ref 'WSFCNode1PrivateIP3'
+        WSFCNode2InstanceType: !Ref 'WSFCNode2InstanceType'
+        WSFCNode2NetBIOSName: !Ref 'WSFCNode2NetBIOSName'
+        WSFCNode2PrivateIP1: !Ref 'WSFCNode2PrivateIP1'
+        WSFCNode2PrivateIP2: !Ref 'WSFCNode2PrivateIP2'
+        WSFCNode2PrivateIP3: !Ref 'WSFCNode2PrivateIP3'
+        PrivateSubnet1ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet1AID'
+        PrivateSubnet2ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet2AID'
+        QSS3BucketName: !Ref 'QSS3BucketName'
+        QSS3KeyPrefix: !Sub '${QSS3KeyPrefix}submodules/quickstart-microsoft-sql/'
+        Volume1Size: !Ref 'Volume1Size'
+        Volume1Type: !Ref 'Volume1Type'
+        Volume1Iops: !Ref 'Volume1Iops'
+        Volume2Size: !Ref 'Volume2Size'
+        Volume2Type: !Ref 'Volume2Type'
+        Volume2Iops: !Ref 'Volume2Iops'
+        Volume3Size: !Ref 'Volume3Size'
+        Volume3Type: !Ref 'Volume3Type'
+        Volume3Iops: !Ref 'Volume3Iops'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+  SharePointFarmStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: FarmSelected
+    DependsOn: SQLStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/sharepoint-farm.yaml
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        ADAdminPassword: !Ref 'DomainAdminPassword'
+        ADAdminUserName: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        ADMemberSecurityGroup: !GetAtt 'ADStack.Outputs.DomainMemberSGID'
+        KeyPairName: !Ref 'KeyPairName'
+        Subnet1ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet1AID'
+        Subnet2ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet2AID'
+        SPProductKey: !Ref 'SPProductKey'
+        SQLServerAccessSecurityGroup: !GetAtt 'SQLStack.Outputs.SQLServerAccessSecurityGroupID'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+        VPCCIDR: !GetAtt 'VPCStack.Outputs.VPCCIDR'
+        SPBinaryBucket: !Ref 'SPBinaryBucket'
+        SPBinaryKey: !Ref 'SPBinaryKey'
+        SPServerNetBIOSNamePrefix: !Ref 'SPServerNetBIOSName'
+        DNSPrefixCentralAdmin: !Ref 'DNSPrefixCentralAdmin'
+        DNSPrefixMainSite: !Ref 'DNSPrefixMainSite'
+        SQLAdminUserName: !Ref 'SQLServiceAccount'
+        SQLAdminPassword: !Ref 'SQLServiceAccountPassword'
+        DNSServerIP: !Ref 'DNSServerIP'
+        SPDatabaseName: !Ref 'AvailabiltyGroupName'
+  SharePointSingleStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: SingleSelected
+    DependsOn: SQLStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/sharepoint-single.yaml
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        ADAdminPassword: !Ref 'DomainAdminPassword'
+        ADAdminUserName: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        ADMemberSecurityGroup: !GetAtt 'ADStack.Outputs.DomainMemberSGID'
+        KeyPairName: !Ref 'KeyPairName'
+        SPDatabaseName: !Ref 'AvailabiltyGroupName'
+        SubnetID: !GetAtt 'VPCStack.Outputs.PrivateSubnet1AID'
+        SPProductKey: !Ref 'SPProductKey'
+        SPServerNetBIOSName: !Ref 'SPServerNetBIOSName'
+        SQLServerAccessSecurityGroup: !GetAtt 'SQLStack.Outputs.SQLServerAccessSecurityGroupID'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+        VPCCIDR: !GetAtt 'VPCStack.Outputs.VPCCIDR'
+        SPBinaryBucket: !Ref 'SPBinaryBucket'
+        SPBinaryKey: !Ref 'SPBinaryKey'
+        SQLAdminUserName: !Ref 'SQLServiceAccount'
+        SQLAdminPassword: !Ref 'SQLServiceAccountPassword'

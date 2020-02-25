@@ -1,0 +1,54 @@
+[
+    {
+        "ParameterKey": "KeyPairName",
+        "ParameterValue": "$[taskcat_getkeypair]"
+    },
+    {
+        "ParameterKey": "AvailabilityZones",
+        "ParameterValue": "$[taskcat_getaz_2]",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SPBinaryBucket",
+        "ParameterValue": "quickstart-ci-media",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SPBinaryKey",
+        "ParameterValue": "microsoft/sharepoint/2019/installer-2019.zip",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "DomainAdminUser",
+        "ParameterValue": "admin",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "DomainAdminPassword",
+        "ParameterValue": "$[taskcat_genpass_16]",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SQLServiceAccount",
+        "ParameterValue": "sqlsa",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SQLServiceAccountPassword",
+        "ParameterValue": "$[taskcat_genpass_16]",
+        "UsePreviousValue": false
+    },
+    {   
+        "ParameterKey": "RDGWCIDR",
+        "ParameterValue": "10.0.0.0/16",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
+    },
+    {
+        "ParameterKey": "Farm",
+        "ParameterValue": "Deploy a single SharePoint server"
+    }
+]
